@@ -1,4 +1,4 @@
-package com.example.realtimeconnect.chat.data.source
+package com.example.realtimeconnect.chat.data.source.socket
 
 import android.util.Log
 import com.example.realtimeconnect.core.constants.NetworkConstants.BASE_URL
@@ -6,7 +6,6 @@ import io.socket.client.Ack
 import io.socket.client.IO;
 import io.socket.client.Socket;
 import org.json.JSONObject
-
 
 class SocketDataSource {
     private lateinit var mSocket: Socket

@@ -8,7 +8,9 @@ import androidx.navigation.toRoute
 import com.example.realtimeconnect.auth.presentation.login.LoginScreen
 import com.example.realtimeconnect.chat.presentation.chatlist.ChatListScreen
 import com.example.realtimeconnect.chat.presentation.chatting.ChattingScreen
+import com.example.realtimeconnect.chat.presentation.groupchat.GroupChatScreen
 import com.example.realtimeconnect.core.constants.ChattingNavigation
+import com.example.realtimeconnect.core.constants.GroupChatNavigation
 import com.example.realtimeconnect.core.constants.HomeScreenNavigation
 import com.example.realtimeconnect.core.constants.LoginNavigation
 
@@ -29,13 +31,22 @@ fun DiscordCloneNavigation(navHostController: NavHostController, startDestinatio
                 navHostController.navigate(
                     ChattingNavigation(userId = userId)
                 )
-            })
+            },
+                onNavigateToGroupChatScreen = { groupId ->
+                    navHostController.navigate(
+                        GroupChatNavigation(groupId = groupId)
+                    )
+                })
         }
         composable<ChattingNavigation> {
             val chatting: ChattingNavigation = it.toRoute()
             ChattingScreen(userId = chatting.userId, onBack = {
                 navHostController.popBackStack()
             })
+        }
+        composable<GroupChatNavigation> {
+            val groupChat: GroupChatNavigation = it.toRoute()
+            GroupChatScreen(groupId = groupChat.groupId)
         }
     }
 

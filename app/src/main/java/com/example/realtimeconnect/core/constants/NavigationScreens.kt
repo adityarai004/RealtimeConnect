@@ -13,3 +13,7 @@ object HomeScreenNavigation
 
 @Serializable
 data class ChattingNavigation(val userId: String)
+
+
+@Serializable
+data class GroupChatNavigation(val groupId: String)

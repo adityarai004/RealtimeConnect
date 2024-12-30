@@ -1,8 +1,11 @@
-package com.example.realtimeconnect.chat.data.repoistory
+package com.example.realtimeconnect.chat.data.repository
 
+import com.example.realtimeconnect.chat.data.model.GroupChatData
+import com.example.realtimeconnect.chat.data.model.GroupData
+import com.example.realtimeconnect.chat.data.model.GroupMessageDTO
 import com.example.realtimeconnect.chat.data.model.MessageDTO
 import com.example.realtimeconnect.chat.data.model.mappers.toDomainList
-import com.example.realtimeconnect.chat.data.source.MessagesDataSource
+import com.example.realtimeconnect.chat.data.source.messages.MessagesDataSource
 import com.example.realtimeconnect.chat.domain.repository.MessagesRepository
 import com.example.realtimeconnect.core.Resource
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +25,20 @@ class MessagesRepositoryImpl @Inject constructor(private val messagesDataSource:
             }
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Cannot fetch messages at the moment"))
+        }
+    }
+
+    override suspend fun getGroupMessages(page: Int,perPage: Int, groupId: String): Flow<Resource<List<GroupMessageDTO?>?>> = flow {
+        emit(Resource.Loading)
+        try {
+            val response = messagesDataSource.getGroupMessages(page,perPage, groupId)
+            if(response.status == true){
+                emit(Resource.Success(response.toDomainList()))
+            } else {
+                emit(Resource.Error(response.message ?: "Something went wrong while fetching messages"))
+            }
+        } catch (e: Exception){
+            emit(Resource.Error(e.message ?: "Something went wrong while fetching messages"))
         }
     }
 }

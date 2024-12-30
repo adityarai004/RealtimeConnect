@@ -1,11 +1,11 @@
 package com.example.realtimeconnect.chat.di
 
-import com.example.realtimeconnect.chat.data.repoistory.ChatListRepositoryImpl
-import com.example.realtimeconnect.chat.data.repoistory.MessagesRepositoryImpl
-import com.example.realtimeconnect.chat.data.source.ChatListDataSource
-import com.example.realtimeconnect.chat.data.source.ChatListDataSourceImpl
-import com.example.realtimeconnect.chat.data.source.MessagesDataSource
-import com.example.realtimeconnect.chat.data.source.MessagesDataSourceImpl
+import com.example.realtimeconnect.chat.data.repository.ChatListRepositoryImpl
+import com.example.realtimeconnect.chat.data.repository.MessagesRepositoryImpl
+import com.example.realtimeconnect.chat.data.source.chat.ChatListDataSource
+import com.example.realtimeconnect.chat.data.source.chat.ChatListDataSourceImpl
+import com.example.realtimeconnect.chat.data.source.messages.MessagesDataSource
+import com.example.realtimeconnect.chat.data.source.messages.MessagesDataSourceImpl
 import com.example.realtimeconnect.chat.domain.repository.ChatListRepository
 import com.example.realtimeconnect.chat.domain.repository.MessagesRepository
 import dagger.Binds

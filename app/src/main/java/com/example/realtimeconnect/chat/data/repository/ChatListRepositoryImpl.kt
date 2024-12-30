@@ -1,8 +1,8 @@
-package com.example.realtimeconnect.chat.data.repoistory
+package com.example.realtimeconnect.chat.data.repository
 
 import android.util.Log
 import com.example.realtimeconnect.chat.data.model.ChatListResponseDTO
-import com.example.realtimeconnect.chat.data.source.ChatListDataSource
+import com.example.realtimeconnect.chat.data.source.chat.ChatListDataSource
 import com.example.realtimeconnect.chat.domain.repository.ChatListRepository
 import com.example.realtimeconnect.core.Resource
 import kotlinx.coroutines.flow.Flow

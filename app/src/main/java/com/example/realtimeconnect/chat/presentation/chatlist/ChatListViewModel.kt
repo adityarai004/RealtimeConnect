@@ -42,12 +42,14 @@ class ChatListViewModel @Inject constructor(private val fetchUsersUseCase: Fetch
     }
 
     private fun handleSuccess(chatListResponseDto: ChatListResponseDTO) {
-        Log.d("HandleSuccess","Masti: ${chatListResponseDto.chatListData?.userIds}")
         _chatListState.update { state ->
             state.copy(
                 loading = false,
                 people = state.people.toMutableList().apply {
                     addAll(chatListResponseDto.chatListData?.userIds ?: emptyList())
+                },
+                groups = state.groups.toMutableList().apply {
+                    addAll(chatListResponseDto.chatListData?.groups ?: emptyList())
                 }
             )
         }

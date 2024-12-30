@@ -56,7 +56,7 @@ import com.example.realtimeconnect.chat.presentation.chatting.state.ChattingScre
 import com.example.realtimeconnect.core.constants.msgCornerSize
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChattingScreen(
     userId: String,
