@@ -6,7 +6,7 @@ import com.example.realtimeconnect.chat.data.model.GroupMessageDTO
 fun GroupChatListResponseDTO.toDomainList() : List<GroupMessageDTO?>?{
     return this.data?.mapNotNull {
         GroupMessageDTO(
-            type = it?.contentType,
+            type = it?.messageType,
             senderId = it?.senderId,
             content = it?.content,
             id = it?.id,

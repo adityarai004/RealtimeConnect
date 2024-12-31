@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.example.realtimeconnect.auth.presentation.login.LoginScreen
+import com.example.realtimeconnect.chat.data.model.GroupData
 import com.example.realtimeconnect.chat.presentation.chatlist.ChatListScreen
 import com.example.realtimeconnect.chat.presentation.chatting.ChattingScreen
 import com.example.realtimeconnect.chat.presentation.groupchat.GroupChatScreen
@@ -27,26 +28,30 @@ fun DiscordCloneNavigation(navHostController: NavHostController, startDestinatio
             })
         }
         composable<HomeScreenNavigation> {
-            ChatListScreen(onNavigateToChattingScreen = { userId ->
-                navHostController.navigate(
-                    ChattingNavigation(userId = userId)
-                )
-            },
-                onNavigateToGroupChatScreen = { groupId ->
+            ChatListScreen(
+                onNavigateToChattingScreen = { userId ->
                     navHostController.navigate(
-                        GroupChatNavigation(groupId = groupId)
+                        ChattingNavigation(userId = userId)
                     )
-                })
+                },
+                onNavigateToGroupChatScreen = { groupId, groupName ->
+                    navHostController.navigate(
+                        GroupChatNavigation(groupId = groupId, groupName= groupName)
+                    )
+                },
+            )
         }
-        composable<ChattingNavigation> {
-            val chatting: ChattingNavigation = it.toRoute()
+        composable<ChattingNavigation> { backstackEntry ->
+            val chatting: ChattingNavigation = backstackEntry.toRoute<ChattingNavigation>()
             ChattingScreen(userId = chatting.userId, onBack = {
                 navHostController.popBackStack()
             })
         }
         composable<GroupChatNavigation> {
-            val groupChat: GroupChatNavigation = it.toRoute()
-            GroupChatScreen(groupId = groupChat.groupId)
+            val groupChat: GroupChatNavigation = it.toRoute<GroupChatNavigation>()
+            GroupChatScreen(groupData = GroupData(groupChat.groupId, groupChat.groupName), onBack = {
+                navHostController.popBackStack()
+            })
         }
     }
 

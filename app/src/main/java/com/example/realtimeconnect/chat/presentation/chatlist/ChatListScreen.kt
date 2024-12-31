@@ -17,11 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.realtimeconnect.chat.data.model.GroupData
 
 @Composable
 fun ChatListScreen(
     onNavigateToChattingScreen: (String) -> Unit,
-    onNavigateToGroupChatScreen: (String) -> Unit,
+    onNavigateToGroupChatScreen: (String,String) -> Unit,
     chatListViewModel: ChatListViewModel = hiltViewModel()
 ) {
     val chatListState = chatListViewModel.chatListState.collectAsStateWithLifecycle()
@@ -57,8 +58,8 @@ fun ChatListScreen(
                             Icon(imageVector = Icons.Default.Email, contentDescription = null)
                         },
                         modifier = Modifier.clickable {
-                            onNavigateToChattingScreen(chatList[it])
-                            Log.d("TAG","Clicked ${chatList[it]}")
+                            onNavigateToGroupChatScreen(groupList[it].id ?: "", groupList[it].name ?: "")
+                            Log.d("TAG","Clicked ${groupList[it]}")
                         }
                     )
                 }
