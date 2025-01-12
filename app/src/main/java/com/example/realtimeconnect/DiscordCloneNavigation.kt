@@ -5,15 +5,15 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.example.realtimeconnect.auth.presentation.login.LoginScreen
-import com.example.realtimeconnect.chat.data.model.GroupData
-import com.example.realtimeconnect.chat.presentation.chatlist.ChatListScreen
-import com.example.realtimeconnect.chat.presentation.chatting.ChattingScreen
-import com.example.realtimeconnect.chat.presentation.groupchat.GroupChatScreen
+import com.example.realtimeconnect.features.auth.presentation.login.LoginScreen
 import com.example.realtimeconnect.core.constants.ChattingNavigation
 import com.example.realtimeconnect.core.constants.GroupChatNavigation
 import com.example.realtimeconnect.core.constants.HomeScreenNavigation
 import com.example.realtimeconnect.core.constants.LoginNavigation
+import com.example.realtimeconnect.features.chat.data.model.GroupData
+import com.example.realtimeconnect.features.chat.presentation.chatlist.ChatListScreen
+import com.example.realtimeconnect.features.chat.presentation.chatting.ChattingScreen
+import com.example.realtimeconnect.features.chat.presentation.groupchat.GroupChatScreen
 
 @Composable
 fun DiscordCloneNavigation(navHostController: NavHostController, startDestination: Any) {
@@ -39,6 +39,11 @@ fun DiscordCloneNavigation(navHostController: NavHostController, startDestinatio
                         GroupChatNavigation(groupId = groupId, groupName= groupName)
                     )
                 },
+                onNavigateToLoginScreen = {
+                    navHostController.navigate(LoginNavigation){
+                        popUpTo <HomeScreenNavigation> { inclusive = true }
+                    }
+                }
             )
         }
         composable<ChattingNavigation> { backstackEntry ->

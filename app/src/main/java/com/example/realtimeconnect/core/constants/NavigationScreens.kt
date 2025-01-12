@@ -1,7 +1,5 @@
 package com.example.realtimeconnect.core.constants
 
-import com.example.realtimeconnect.chat.data.model.GroupChatData
-import com.example.realtimeconnect.chat.data.model.GroupData
 import kotlinx.serialization.Serializable
 
 @Serializable
