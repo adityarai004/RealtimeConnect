@@ -50,10 +50,37 @@ class GroupChatViewModel @Inject constructor(
     private val sockets = SocketDataSource()
     fun handleEvents(event: GroupChatEvents) {
         when (event) {
-            is GroupChatEvents.OnSend -> { /* TODO: Handle Sending Message */
+            is GroupChatEvents.OnSend -> {
+                viewModelScope.launch {
+                    val message = _state.value.messageValue
+                    val groupId = _state.value.groupId
+                    val userId = _state.value.myUserId
+                    val payload = mapOf(
+                        "content" to message,
+                        "groupId" to groupId,
+                        "senderId" to userId,
+                    )
+                    sockets.sendGroupMessage(payload) { response ->
+                        if (response["sent"] == 1) {
+//                            _messages.update {
+//                                it + GroupMessageDTO(
+//                                    content = message,
+//                                    senderId = userId,
+//                                    createdAt = (response["timestamp"] as String).substring(11, 16),
+//                                    type = "text",
+//                                    id = response["msgId"] as? String
+//                                )
+//                            }
+                            _state.update { it.copy(messageValue = "") }
+                        }
+                    }
+                }
             }
 
-            is GroupChatEvents.OnTextChange -> { /* TODO: Handle Typinh */
+            is GroupChatEvents.OnTextChange -> {
+                _state.update {
+                    it.copy(messageValue = event.newValue)
+                }
             }
 
             is GroupChatEvents.OnTapAdd -> {
@@ -71,9 +98,13 @@ class GroupChatViewModel @Inject constructor(
 
             is GroupChatEvents.OnAddMember -> {
                 viewModelScope.launch {
-                    joinGroupUseCase(event.groupId, event.userId).collect{
-                        when(it){
-                            is Resource.Error -> Log.d(TAG, "Error while adding user to group ${it.error}")
+                    joinGroupUseCase(event.groupId, event.userId).collect {
+                        when (it) {
+                            is Resource.Error -> Log.d(
+                                TAG,
+                                "Error while adding user to group ${it.error}"
+                            )
+
                             Resource.Loading -> Log.d(TAG, "Loading")
                             is Resource.Success -> {
                                 Log.d(TAG, "User added to group")
@@ -86,9 +117,13 @@ class GroupChatViewModel @Inject constructor(
         }
     }
 
-    fun fetchGroupChats(groupId: String) {
+    private fun fetchGroupChats(groupId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getGroupMessagesUseCase(page = 1, perPage = 10, groupId = groupId).collect { response ->
+            getGroupMessagesUseCase(
+                page = 1,
+                perPage = 10,
+                groupId = groupId
+            ).collect { response ->
                 when (response) {
                     is Resource.Error -> Log.d(
                         "GroupChatViewModel",
@@ -124,10 +159,34 @@ class GroupChatViewModel @Inject constructor(
                                 users = response.data.chatListData?.userIds ?: emptyList()
                             )
                         }
-                        Log.d(TAG,"Current users ${_state.value.users.size}")
+                        Log.d(TAG, "Current users ${_state.value.users.size}")
                     }
                 }
             }
         }
+    }
+
+    fun initializeRoom(groupId: String) {
+        _state.update {
+            it.copy(groupId = groupId)
+        }
+        viewModelScope.launch {
+            sockets.connectSocket(_state.value.myUserId)
+            sockets.joinGroup(groupId, _state.value.myUserId)
+            fetchGroupChats(groupId)
+            sockets.joinGroup(groupId, _state.value.myUserId)
+            sockets.onGroupMessage {
+                _messages.update { currentList ->
+                    currentList + GroupMessageDTO(
+                        content = it["content"] as? String ?: "",
+                        senderId = it["senderId"] as? String,
+                        createdAt = (it["createdAt"] as String).substring(11, 16),
+                        type = it["messageType"] as? String,
+                        id = it["id"] as? String
+                    )
+                }
+            }
+        }
+
     }
 }

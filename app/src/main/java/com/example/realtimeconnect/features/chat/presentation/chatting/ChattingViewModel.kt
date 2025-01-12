@@ -46,7 +46,9 @@ class ChattingViewModel @Inject constructor(
         when (event) {
             is ChattingScreenEvents.OnSend -> handleSendMessage()
             is ChattingScreenEvents.OnTextChange -> handleTextChange(event.newValue)
-            else -> {Log.d("TAG", "Masti.com")}
+            else -> {
+                Log.d("TAG", "Masti.com")
+            }
         }
     }
 
@@ -90,8 +92,8 @@ class ChattingViewModel @Inject constructor(
             _state.update { it.copy(receiverId = userId, senderId = senderId) }
 
             getMessages(userId)
-            sockets.connectSocket(senderId, userId)
-
+            sockets.connectSocket(senderId)
+            sockets.sendEvent("message-seen", mapOf("senderId" to senderId, "viewerId" to userId))
             setupSocketListeners()
         }
     }

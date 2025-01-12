@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 class SocketDataSource {
     private lateinit var mSocket: Socket
-    fun connectSocket(userId: String, senderId: String) {
+    fun connectSocket(userId: String) {
         try {
             Log.d("TAG", "Connecting...")
             mSocket = IO.socket(BASE_URL)
@@ -17,7 +17,6 @@ class SocketDataSource {
             mSocket.on(Socket.EVENT_CONNECT) {
                 Log.d("TAG", "Connected to server")
                 mSocket.emit("create-connection", userId)
-                mSocket.emit("message-seen", JSONObject(mapOf("senderId" to senderId, "viewerId" to userId )))
             }
 
             mSocket.on(Socket.EVENT_CONNECT_ERROR) { args ->
@@ -60,4 +59,41 @@ class SocketDataSource {
             }
         }
     }
+
+    fun joinGroup(groupId: String, userId: String) {
+        val payload = JSONObject(mapOf("groupId" to groupId, "userId" to userId))
+        mSocket.emit("join-group", payload)
+    }
+
+    // Send a group message
+    fun sendGroupMessage(payload: Map<String, Any>, ack: (JSONObject) -> Unit) {
+        Log.d("Sending Group Message", payload.toString())
+        val formattedPayload = JSONObject(payload)
+        mSocket.emit("send-group-message", formattedPayload, Ack {
+            val ackData = it[0] as JSONObject
+            Log.d("Group Message Acknowledgement", ackData.toString())
+            ack(ackData)
+        })
+    }
+
+    // Listen for group messages
+    fun onGroupMessage(listener: (JSONObject) -> Unit) {
+        if (::mSocket.isInitialized) {
+            mSocket.on("receive-group-messages") { args ->
+                Log.d("Group Message Event", args.toString())
+                if (args.isNotEmpty()) {
+                    val message = args[0] as JSONObject
+                    listener(message)
+                }
+            }
+        }
+    }
+
+    // Disconnect from the socket
+    fun disconnectSocket() {
+        if (::mSocket.isInitialized) {
+            mSocket.disconnect()
+        }
+    }
+
 }

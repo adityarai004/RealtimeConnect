@@ -1,5 +1,6 @@
 package com.example.realtimeconnect.features.chat.presentation.groupchat
 
+import android.graphics.Paint.Align
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,10 +8,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,6 +32,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +49,7 @@ import com.example.realtimeconnect.features.chat.data.model.GroupData
 import com.example.realtimeconnect.features.chat.presentation.common.MeMessageBubble
 import com.example.realtimeconnect.features.chat.presentation.common.OtherUserMessageBubble
 import com.example.realtimeconnect.features.chat.presentation.groupchat.state.GroupChatEvents
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +63,7 @@ fun GroupChatScreen(
     val usersToAdd = groupChatState.value.users
     val context = LocalContext.current
     LaunchedEffect(Unit) {
-        groupChatViewModel.fetchGroupChats(groupId = groupData.id ?: "")
+        groupChatViewModel.initializeRoom(groupId = groupData.id ?: "")
     }
 
     LaunchedEffect(groupChatState.value.showToast) {
@@ -68,6 +73,17 @@ fun GroupChatScreen(
             }
         }
     }
+    val lazyListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(groupChatMessagesList.size) {
+        if(groupChatMessagesList.isNotEmpty()) {
+            coroutineScope.launch {
+                lazyListState.animateScrollToItem(groupChatMessagesList.lastIndex)
+            }
+        }
+    }
+
     if (groupChatState.value.isDialogOpen) {
         Dialog(onDismissRequest = {}) {
             BasicAlertDialog(onDismissRequest = {
@@ -175,12 +191,12 @@ fun GroupChatScreen(
             )
         },
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             Column(modifier = Modifier.align(Alignment.BottomCenter)) {
-                LazyColumn {
+                LazyColumn (state = lazyListState){
                     items(groupChatMessagesList.size) { index ->
                         val message = groupChatMessagesList[index]
-                        val isMe = message?.senderId != groupChatState.value.myUserId
+                        val isMe = message?.senderId == groupChatState.value.myUserId
                         val alignment =
                             if (isMe) Alignment.CenterEnd else Alignment.CenterStart
 

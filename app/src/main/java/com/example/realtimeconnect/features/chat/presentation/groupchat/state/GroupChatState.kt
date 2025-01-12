@@ -8,4 +8,5 @@ data class GroupChatState(
     val isDialogOpen: Boolean = false,
     val showToast: Boolean = false,
     val toastMessage: String = "",
+    val groupId: String = "",
 )
