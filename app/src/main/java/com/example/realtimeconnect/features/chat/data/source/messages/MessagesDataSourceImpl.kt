@@ -12,9 +12,10 @@ import javax.inject.Inject
 
 class MessagesDataSourceImpl @Inject constructor(private val httpClient: HttpClient) :
     MessagesDataSource {
-    override suspend fun getMessages(receiverId: String): DMResponseDTO {
+    override suspend fun getMessages(receiverId: String, timestamp: String): DMResponseDTO {
         val response = httpClient.get(DMS){
             parameter("receiverId", receiverId)
+            parameter("timestamp", timestamp)
         }.body<DMResponseDTO>()
 
         return response

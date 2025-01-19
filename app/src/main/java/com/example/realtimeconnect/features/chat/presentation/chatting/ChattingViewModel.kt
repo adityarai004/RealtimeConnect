@@ -9,6 +9,7 @@ import com.example.realtimeconnect.core.datastore.DataStoreHelper
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import com.example.realtimeconnect.features.chat.data.source.socket.SocketDataSource
 import com.example.realtimeconnect.features.chat.domain.usecase.GetMessagesUseCase
+import com.example.realtimeconnect.features.chat.domain.usecase.SyncRemoteServerUseCase
 import com.example.realtimeconnect.features.chat.presentation.chatting.state.ChattingScreenEvents
 import com.example.realtimeconnect.features.chat.presentation.chatting.state.ChattingState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ChattingViewModel @Inject constructor(
     private val dataStoreHelper: DataStoreHelper,
-    private val getMessagesUseCase: GetMessagesUseCase
+    private val getMessagesUseCase: GetMessagesUseCase,
+    private val syncRemoteServerUseCase: SyncRemoteServerUseCase
 ) : ViewModel() {
 
     // State management
@@ -91,7 +93,7 @@ class ChattingViewModel @Inject constructor(
             val senderId = dataStoreHelper.getString(SharedPrefsConstants.USERID)
             _state.update { it.copy(receiverId = userId, senderId = senderId) }
 
-            getMessages(userId)
+            getMessages(chattingState.value.senderId, userId)
             sockets.connectSocket(senderId)
             sockets.sendEvent("message-seen", mapOf("senderId" to senderId, "viewerId" to userId))
             setupSocketListeners()
@@ -143,17 +145,14 @@ class ChattingViewModel @Inject constructor(
     /**
      * Fetch messages from the backend
      */
-    private fun getMessages(userId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            getMessagesUseCase.invoke(userId).collect { response ->
-                when (response) {
-                    is Resource.Error -> Log.e("GetMessages", "Error: ${response.error}")
-                    Resource.Loading -> Log.d("GetMessages", "Loading")
-                    is Resource.Success -> {
-                        _messageState.update { it + (response.data ?: emptyList()) }
-                    }
-                }
+    private fun getMessages(senderId: String, receiverId: String) {
+        viewModelScope.launch {
+            getMessagesUseCase(senderId, receiverId).collect { response ->
+                _messageState.update { it + response }
             }
+        }
+        viewModelScope.launch {
+            syncRemoteServerUseCase(senderId, receiverId)
         }
     }
 

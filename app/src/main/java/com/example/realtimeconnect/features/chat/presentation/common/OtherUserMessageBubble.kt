@@ -32,7 +32,7 @@ import com.example.realtimeconnect.R
 import com.example.realtimeconnect.core.constants.msgCornerSize
 
 @Composable
-fun OtherUserMessageBubble(modifier: Modifier = Modifier,alignment: Alignment, content: String, timestamp: String, senderId: String) {
+fun OtherUserMessageBubble(alignment: Alignment, content: String, timestamp: String, senderId: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -40,7 +40,7 @@ fun OtherUserMessageBubble(modifier: Modifier = Modifier,alignment: Alignment, c
         contentAlignment = alignment
     ) {
         Row {
-            Text(senderId.substring(0,1), modifier = Modifier.clip(CircleShape).background(Color.Red))
+            Text(senderId.substring(0,1), modifier = Modifier.clip(CircleShape).background(Color.Red).padding(8.dp))
             Spacer(modifier = Modifier.width(10.dp))
             Column(
                 Modifier

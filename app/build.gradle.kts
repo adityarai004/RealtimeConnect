@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
+    id("com.google.devtools.ksp")
     kotlin("plugin.serialization") version "2.1.0"
 
 }
@@ -82,12 +83,15 @@ dependencies {
     implementation(libs.okhttp)
     implementation (libs.socket.io.client)
     implementation(libs.ktor.client.auth)
-    implementation ("com.airbnb.android:lottie-compose:6.6.2")
+    implementation (libs.lottie.compose)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
+    annotationProcessor("android.arch.persistence.room:compiler:1.1.1")
 
 }
 
-
 kapt {
-    correctErrorTypes = true
+    correctErrorTypes =  true
 }

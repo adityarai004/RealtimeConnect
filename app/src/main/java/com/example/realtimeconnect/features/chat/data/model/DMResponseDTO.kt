@@ -28,15 +28,17 @@ data class MessageData(
 @Serializable
 data class Message(
     @SerialName("createdAt")
-    var createdAt: String?,
+    var createdAt: String,
     @SerialName("id")
-    var id: String?,
+    var id: String,
     @SerialName("messageContent")
-    var messageContent: String?,
+    var messageContent: String,
     @SerialName("receiverId")
-    var receiverId: String?,
+    var receiverId: String,
     @SerialName("senderId")
-    var senderId: String?,
+    var senderId: String,
     @SerialName("status")
     var status: String?,
+    @SerialName("contentType")
+    val contentType: String = "text"
 )
