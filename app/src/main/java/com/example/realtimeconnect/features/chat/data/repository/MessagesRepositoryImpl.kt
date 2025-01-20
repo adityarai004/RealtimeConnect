@@ -15,7 +15,6 @@ import com.example.realtimeconnect.features.chat.data.model.mappers.toISOString
 import com.example.realtimeconnect.features.chat.data.source.messages.MessagesDataSource
 import com.example.realtimeconnect.features.chat.domain.repository.MessagesRepository
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -26,7 +25,7 @@ import javax.inject.Inject
 class MessagesRepositoryImpl @Inject constructor(
     private val messagesDataSource: MessagesDataSource,
     private val messagesDao: MessagesDao,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : MessagesRepository {
 //    override suspend fun getMessages(receiverId: String): Flow<Resource<List<MessageDTO>?>> = flow {
 //        emit(Resource.Loading)
@@ -82,21 +81,32 @@ class MessagesRepositoryImpl @Inject constructor(
                 Log.d("Sync", "Skipping sync - found $pendingMessages pending messages")
                 return
             }
-
             val lastMsgTimeStamp = messagesDao.getLastMessageTimestamp(senderId, receiverId).first()
             val response = messagesDataSource.getMessages(
                 receiverId = receiverId,
                 timestamp = lastMsgTimeStamp.toISOString()
             )
 
-            if (response.success == true) {
-                val messages = response.toEntityList()
-                if (!messages.isNullOrEmpty()) {
-                    messagesDao.insertMessage(messages)
-                    Log.d("Sync", "Successfully synced ${messages.size} messages")
-                }
-            } else {
+            if (response.success != true) {
                 Log.e("SyncError", "Sync failed: ${response.message}")
+                return
+            }
+
+            // To update the status of messages which were already there in the local database of the sender
+            if (response.messageData?.latestStatus != null) {
+                val latestStatus = response.messageData?.latestStatus ?: ""
+                if (latestStatus == "seen") {
+                    messagesDao.updateMessagesToSeen(senderId, receiverId)
+                } else if (latestStatus == "delivered") {
+                    messagesDao.updateMessagesToReceived(senderId, receiverId)
+                }
+            }
+
+            // Fetching and inserting messages into database which are present on server only and not in local database
+            val messages = response.toEntityList()
+            if (!messages.isNullOrEmpty()) {
+                messagesDao.insertMessage(messages)
+                Log.d("Sync", "Successfully synced ${messages.size} messages")
             }
         } catch (e: Exception) {
             Log.e("SyncError", "Sync error: ${e.message}")

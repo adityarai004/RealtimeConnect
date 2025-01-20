@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.io.IOException
@@ -18,7 +20,7 @@ class DataStoreHelper @Inject constructor(private val userPreferences: DataStore
                 prefs[booleanPreferencesKey("isLoggedIn")] = true
             }
         } catch (ioException: IOException) {
-            Log.e("TjPreferences", "Failed to update user preferences", ioException)
+            Log.e("RtcPreferences", "Failed to update user preferences", ioException)
         }
     }
 
@@ -27,7 +29,7 @@ class DataStoreHelper @Inject constructor(private val userPreferences: DataStore
             val preferences = userPreferences.data.first()
             return preferences[stringPreferencesKey("authToken")] ?: ""
         } catch (ioException: IOException) {
-            Log.e("TjPreferences", "Failed to update user preferences", ioException)
+            Log.e("RtcPreferences", "Failed to update user preferences", ioException)
             return ""
         }
     }
@@ -37,7 +39,7 @@ class DataStoreHelper @Inject constructor(private val userPreferences: DataStore
                 it[booleanPreferencesKey("isLoggedIn")] = isLoggedIn
             }
         } catch (ioException: IOException){
-            Log.e("TjPreferences", "Failed to Update user data ${ioException.message}")
+            Log.e("RtcPreferences", "Failed to Update user data ${ioException.message}")
         }
     }
 
@@ -46,7 +48,7 @@ class DataStoreHelper @Inject constructor(private val userPreferences: DataStore
             val prefs = userPreferences.data.first()
             return prefs[booleanPreferencesKey("isLoggedIn")] ?: false
         } catch (ioException: IOException){
-            Log.e("TjPreferences", "Failed to Update user data ${ioException.message}")
+            Log.e("RtcPreferences", "Failed to Update user data ${ioException.message}")
         }
         return false
     }
@@ -57,7 +59,7 @@ class DataStoreHelper @Inject constructor(private val userPreferences: DataStore
                 it[stringPreferencesKey(key)] = value
             }
         } catch (ioException: IOException){
-            Log.e("TjPreferences", "Failed to Update user data ${ioException.message}")
+            Log.e("RtcPreferences", "Failed to Update user data ${ioException.message}")
         }
     }
     suspend fun getString(key: String): String{
@@ -65,9 +67,20 @@ class DataStoreHelper @Inject constructor(private val userPreferences: DataStore
             val prefs = userPreferences.data.first()
             return prefs[stringPreferencesKey(key)] ?: ""
         } catch (ioException: IOException){
-            Log.e("TjPreferences", "Failed to Update user data ${ioException.message}")
+            Log.e("RtcPreferences", "Failed to Update user data ${ioException.message}")
         }
         return ""
     }
+
+    suspend fun getLong(key: String): Long{
+        try{
+            val prefs = userPreferences.data.first()
+            return prefs[longPreferencesKey(key)] ?: 0L
+        } catch (ioException: IOException){
+            Log.e("RtcPreferences", "Failed to Update user data ${ioException.message}")
+        }
+        return 0L
+    }
+
 
 }

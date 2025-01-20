@@ -1,6 +1,5 @@
 package com.example.realtimeconnect.features.chat.domain.usecase
 
-import com.example.realtimeconnect.core.Resource
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import com.example.realtimeconnect.features.chat.domain.repository.MessagesRepository
 import kotlinx.coroutines.flow.Flow

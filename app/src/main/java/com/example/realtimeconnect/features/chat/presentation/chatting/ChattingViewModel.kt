@@ -3,7 +3,6 @@ package com.example.realtimeconnect.features.chat.presentation.chatting
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.realtimeconnect.core.Resource
 import com.example.realtimeconnect.core.constants.SharedPrefsConstants
 import com.example.realtimeconnect.core.datastore.DataStoreHelper
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
@@ -48,9 +47,6 @@ class ChattingViewModel @Inject constructor(
         when (event) {
             is ChattingScreenEvents.OnSend -> handleSendMessage()
             is ChattingScreenEvents.OnTextChange -> handleTextChange(event.newValue)
-            else -> {
-                Log.d("TAG", "Masti.com")
-            }
         }
     }
 
@@ -88,14 +84,17 @@ class ChattingViewModel @Inject constructor(
     /**
      * Socket connection and event listeners
      */
-    fun connect(userId: String) {
+    fun connect(receiverId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val senderId = dataStoreHelper.getString(SharedPrefsConstants.USERID)
-            _state.update { it.copy(receiverId = userId, senderId = senderId) }
+            val myUserId = dataStoreHelper.getString(SharedPrefsConstants.USERID)
+            _state.update { it.copy(receiverId = receiverId, senderId = myUserId) }
 
-            getMessages(chattingState.value.senderId, userId)
-            sockets.connectSocket(senderId)
-            sockets.sendEvent("message-seen", mapOf("senderId" to senderId, "viewerId" to userId))
+            getMessages(chattingState.value.senderId, receiverId)
+            sockets.connectSocket(myUserId)
+            sockets.sendEvent(
+                "message-seen",
+                mapOf("senderId" to receiverId, "viewerId" to myUserId)
+            )
             setupSocketListeners()
         }
     }
@@ -148,7 +147,11 @@ class ChattingViewModel @Inject constructor(
     private fun getMessages(senderId: String, receiverId: String) {
         viewModelScope.launch {
             getMessagesUseCase(senderId, receiverId).collect { response ->
-                _messageState.update { it + response }
+                response.map { singleMessage ->
+                    if (!_messageState.value.contains(singleMessage)) {
+                        _messageState.update { it + response }
+                    }
+                }
             }
         }
         viewModelScope.launch {

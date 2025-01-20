@@ -20,7 +20,9 @@ data class MessageData(
     @SerialName("messages")
     var messages: List<Message?>?,
     @SerialName("total")
-    var total: Int?
+    var total: Int?,
+    @SerialName("latestStatus")
+    val latestStatus: String?
 )
 
 
