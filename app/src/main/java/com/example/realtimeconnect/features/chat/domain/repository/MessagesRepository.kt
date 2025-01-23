@@ -9,5 +9,7 @@ interface MessagesRepository {
 //    suspend fun getMessages(receiverId: String): Flow<Resource<List<MessageDTO>?>>
     suspend fun getGroupMessages(page: Int,perPage: Int, groupId: String): Flow<Resource<List<GroupMessageDTO?>?>>
     suspend fun getLocalMessages(senderId: String, receivedId: String): Flow<List<MessageDTO>>
-    suspend fun syncRemoteServer(senderId: String, receiverId: String)
+    suspend fun syncRemoteServer(senderId: String, receiverId: String): Flow<Unit>
+    suspend fun sendMessage(message: String, senderId: String, receiverId: String): Flow<Unit>
+    suspend fun receiveMessage()
 }

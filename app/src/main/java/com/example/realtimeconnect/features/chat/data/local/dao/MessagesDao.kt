@@ -15,7 +15,7 @@ interface MessagesDao {
     fun getMessages(senderId: String, receiverId: String): Flow<List<MessageEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMessage(messages: List<MessageEntity>)
+    fun insertMessage(messages: List<MessageEntity>): List<Long>
 
     @Delete
     suspend fun deleteMessage(message: MessageEntity)
@@ -31,4 +31,7 @@ interface MessagesDao {
 
     @Query("UPDATE messages SET status = \"seen\" WHERE (((senderId = :senderId AND receiverId = :receiverId) OR (senderId = :receiverId AND receiverId = :senderId)) AND status != \"seen\") ")
     suspend fun updateMessagesToSeen(senderId: String, receiverId: String)
+
+    @Query("UPDATE messages SET remoteId= :remoteId, status= \"sent\" WHERE id = :messageId")
+    fun updateMessageToSent(messageId: Long, remoteId: String)
 }

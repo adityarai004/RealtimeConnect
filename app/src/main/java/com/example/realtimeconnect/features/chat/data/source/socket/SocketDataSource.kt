@@ -1,19 +1,16 @@
 package com.example.realtimeconnect.features.chat.data.source.socket
 
 import android.util.Log
-import com.example.realtimeconnect.core.constants.NetworkConstants.BASE_URL
 import io.socket.client.Ack
-import io.socket.client.IO;
 import io.socket.client.Socket;
 import org.json.JSONObject
+import javax.inject.Inject
 
-class SocketDataSource {
-    private lateinit var mSocket: Socket
+class SocketDataSource @Inject constructor(private val mSocket: Socket) {
     fun connectSocket(userId: String) {
         try {
+            mSocket.off()
             Log.d("TAG", "Connecting...")
-            mSocket = IO.socket(BASE_URL)
-
             mSocket.on(Socket.EVENT_CONNECT) {
                 Log.d("TAG", "Connected to server")
                 mSocket.emit("create-connection", userId)
@@ -43,21 +40,20 @@ class SocketDataSource {
         })
     }
 
-    fun sendEvent(event: String, payload: Map<String, Any>){
+    fun sendEvent(event: String, payload: Map<String, Any>) {
         val formattedPayload = JSONObject(payload)
         mSocket.emit(event, formattedPayload)
     }
 
     fun onMessage(event: String, listener: (JSONObject) -> Unit) {
-        if (::mSocket.isInitialized) {
-            mSocket.on(event) { args ->
-                Log.d("ARGS", args.toString())
-                if (args.isNotEmpty()) {
-                    val data = args[0] as JSONObject
-                    listener(data)
-                }
+        mSocket.on(event) { args ->
+            Log.d("ARGS", args.toString())
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                listener(data)
             }
         }
+
     }
 
     fun joinGroup(groupId: String, userId: String) {
@@ -78,22 +74,19 @@ class SocketDataSource {
 
     // Listen for group messages
     fun onGroupMessage(listener: (JSONObject) -> Unit) {
-        if (::mSocket.isInitialized) {
-            mSocket.on("receive-group-messages") { args ->
-                Log.d("Group Message Event", args.toString())
-                if (args.isNotEmpty()) {
-                    val message = args[0] as JSONObject
-                    listener(message)
-                }
+        mSocket.on("receive-group-messages") { args ->
+            Log.d("Group Message Event", args.toString())
+            if (args.isNotEmpty()) {
+                val message = args[0] as JSONObject
+                listener(message)
             }
         }
+
     }
 
     // Disconnect from the socket
     fun disconnectSocket() {
-        if (::mSocket.isInitialized) {
-            mSocket.disconnect()
-        }
+        mSocket.disconnect()
     }
 
 }

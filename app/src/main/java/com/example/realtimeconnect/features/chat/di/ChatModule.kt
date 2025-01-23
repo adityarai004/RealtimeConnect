@@ -6,12 +6,15 @@ import com.example.realtimeconnect.features.chat.data.source.chat.ChatListDataSo
 import com.example.realtimeconnect.features.chat.data.source.chat.ChatListDataSourceImpl
 import com.example.realtimeconnect.features.chat.data.source.messages.MessagesDataSource
 import com.example.realtimeconnect.features.chat.data.source.messages.MessagesDataSourceImpl
+import com.example.realtimeconnect.features.chat.data.source.socket.SocketDataSource
 import com.example.realtimeconnect.features.chat.domain.repository.ChatListRepository
 import com.example.realtimeconnect.features.chat.domain.repository.MessagesRepository
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 
 @Module
@@ -29,4 +32,5 @@ abstract class ChatModule {
 
     @Binds
     abstract fun bindMessagesRepository(messagesRepositoryImpl: MessagesRepositoryImpl): MessagesRepository
+
 }

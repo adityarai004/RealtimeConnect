@@ -6,13 +6,16 @@ import androidx.annotation.RequiresApi
 import com.example.realtimeconnect.core.Resource
 import com.example.realtimeconnect.core.di.IoDispatcher
 import com.example.realtimeconnect.features.chat.data.local.dao.MessagesDao
+import com.example.realtimeconnect.features.chat.data.local.entity.MessageEntity
 import com.example.realtimeconnect.features.chat.data.model.GroupMessageDTO
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import com.example.realtimeconnect.features.chat.data.model.mappers.toDomainList
 import com.example.realtimeconnect.features.chat.data.model.mappers.toDomainModel
 import com.example.realtimeconnect.features.chat.data.model.mappers.toEntityList
 import com.example.realtimeconnect.features.chat.data.model.mappers.toISOString
+import com.example.realtimeconnect.features.chat.data.model.mappers.toUnixTimestamp
 import com.example.realtimeconnect.features.chat.data.source.messages.MessagesDataSource
+import com.example.realtimeconnect.features.chat.data.source.socket.SocketDataSource
 import com.example.realtimeconnect.features.chat.domain.repository.MessagesRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +29,7 @@ class MessagesRepositoryImpl @Inject constructor(
     private val messagesDataSource: MessagesDataSource,
     private val messagesDao: MessagesDao,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val socket: SocketDataSource
 ) : MessagesRepository {
 //    override suspend fun getMessages(receiverId: String): Flow<Resource<List<MessageDTO>?>> = flow {
 //        emit(Resource.Loading)
@@ -71,15 +75,15 @@ class MessagesRepositoryImpl @Inject constructor(
     }.flowOn(ioDispatcher)
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    override suspend fun syncRemoteServer(senderId: String, receiverId: String) {
+
+    override suspend fun syncRemoteServer(senderId: String, receiverId: String): Flow<Unit> = flow<Unit> {
         try {
             Log.d("Sync", "Starting sync operation")
 
             val pendingMessages = messagesDao.getPendingStatus(senderId, receiverId).first()
             if (pendingMessages > 0) {
                 Log.d("Sync", "Skipping sync - found $pendingMessages pending messages")
-                return
+                return@flow
             }
             val lastMsgTimeStamp = messagesDao.getLastMessageTimestamp(senderId, receiverId).first()
             val response = messagesDataSource.getMessages(
@@ -89,7 +93,7 @@ class MessagesRepositoryImpl @Inject constructor(
 
             if (response.success != true) {
                 Log.e("SyncError", "Sync failed: ${response.message}")
-                return
+                return@flow
             }
 
             // To update the status of messages which were already there in the local database of the sender
@@ -111,6 +115,55 @@ class MessagesRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Log.e("SyncError", "Sync error: ${e.message}")
             throw e // Rethrow to handle in ViewModel if needed
+        }
+    }.flowOn(ioDispatcher)
+
+    override suspend fun sendMessage(message: String, senderId: String, receiverId: String): Flow<Unit> = flow<Unit> {
+        try {
+            val rowId = messagesDao.insertMessage(
+                listOf(
+                    MessageEntity(
+                        senderId = senderId,
+                        receiverId = receiverId,
+                        content = message,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            )
+            Log.d("SendMessage", "Message inserted with rowId: ${rowId.firstOrNull()}")
+            socket.sendMessage(
+                mapOf("msg" to message, "receiverId" to receiverId, "senderId" to senderId)
+            ) { response ->
+                if (response["sent"] == 1) {
+                    messagesDao.updateMessageToSent(
+                        rowId.firstOrNull() ?: 0,
+                        response["msgId"] as? String ?: ""
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SendMessageError", "Error sending message: ${e.message}")
+        }
+    }.flowOn(ioDispatcher)
+
+    override suspend fun receiveMessage() {
+        try {
+            socket.onMessage("receive-message") { data ->
+                Log.d("Receive Message", data.toString())
+                messagesDao.insertMessage(
+                    listOf(
+                        MessageEntity(
+                            senderId = data["senderId"] as? String ?: "",
+                            receiverId = data["receiverId"] as? String ?: "",
+                            content = data["msg"] as? String ?: "",
+                            timestamp = (data["timestamp"] as String).toUnixTimestamp(),
+                            remoteId = data["msgId"] as? String,
+                        )
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("SocketError", "Socket Error: ${e.message}")
         }
     }
 }

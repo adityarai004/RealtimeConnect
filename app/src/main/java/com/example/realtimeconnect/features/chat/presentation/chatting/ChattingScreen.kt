@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,7 +85,9 @@ fun ChattingScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Black),
+                title = {
                 Text(
                     userId,
                     style = TextStyle(

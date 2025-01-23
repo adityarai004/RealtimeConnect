@@ -26,7 +26,8 @@ class GroupChatViewModel @Inject constructor(
     private val getGroupMessagesUseCase: GetGroupMessagesUseCase,
     private val getUsersUseCase: FetchNonGroupUsersUseCase,
     private val dataStoreHelper: DataStoreHelper,
-    private val joinGroupUseCase: JoinGroupUseCase
+    private val joinGroupUseCase: JoinGroupUseCase,
+    private val sockets: SocketDataSource
 ) : ViewModel() {
     companion object {
         const val TAG = "GroupChatViewModel"
@@ -47,7 +48,6 @@ class GroupChatViewModel @Inject constructor(
         }
     }
 
-    private val sockets = SocketDataSource()
     fun handleEvents(event: GroupChatEvents) {
         when (event) {
             is GroupChatEvents.OnSend -> {

@@ -8,6 +8,8 @@ import com.example.realtimeconnect.core.datastore.DataStoreHelper
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import com.example.realtimeconnect.features.chat.data.source.socket.SocketDataSource
 import com.example.realtimeconnect.features.chat.domain.usecase.GetMessagesUseCase
+import com.example.realtimeconnect.features.chat.domain.usecase.HandleMessageReceiveUseCase
+import com.example.realtimeconnect.features.chat.domain.usecase.SendMessageUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.SyncRemoteServerUseCase
 import com.example.realtimeconnect.features.chat.presentation.chatting.state.ChattingScreenEvents
 import com.example.realtimeconnect.features.chat.presentation.chatting.state.ChattingState
@@ -15,6 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import org.json.JSONObject
 import javax.inject.Inject
@@ -23,7 +26,10 @@ import javax.inject.Inject
 class ChattingViewModel @Inject constructor(
     private val dataStoreHelper: DataStoreHelper,
     private val getMessagesUseCase: GetMessagesUseCase,
-    private val syncRemoteServerUseCase: SyncRemoteServerUseCase
+    private val syncRemoteServerUseCase: SyncRemoteServerUseCase,
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val handleMessageReceiveUseCase: HandleMessageReceiveUseCase,
+    private val sockets: SocketDataSource
 ) : ViewModel() {
 
     // State management
@@ -34,7 +40,6 @@ class ChattingViewModel @Inject constructor(
     val messageState = _messageState.asStateFlow()
 
     // Socket instance
-    private val sockets = SocketDataSource()
 
     // Coroutine management
     private var debounceJob: Job? = null
@@ -52,27 +57,16 @@ class ChattingViewModel @Inject constructor(
 
     private fun handleSendMessage() {
         if (chattingState.value.messageValue.isNotEmpty()) {
-            sockets.sendMessage(
-                mapOf(
-                    "msg" to chattingState.value.messageValue,
-                    "receiverId" to chattingState.value.receiverId,
-                    "senderId" to chattingState.value.senderId
-                )
-            ) { response ->
-                if (response["sent"] == 1) {
-                    addMessageToState(
-                        MessageDTO(
-                            content = chattingState.value.messageValue,
-                            senderId = chattingState.value.senderId,
-                            receiverId = chattingState.value.receiverId,
-                            timestamp = (response["timestamp"] as? String)?.substring(11, 16),
-                            messageId = response["msgId"] as? String,
-                            status = "sent"
-                        )
-                    )
-                    clearMessageInput()
+            viewModelScope.launch {
+                sendMessageUseCase(
+                    message = chattingState.value.messageValue,
+                    senderId = chattingState.value.senderId,
+                    receiverId = chattingState.value.receiverId
+                ).collect{
+                    Log.d("Message", "Message sent ${chattingState.value.messageValue}")
                 }
             }
+            _state.update { it.copy(messageValue = "") }
         }
     }
 
@@ -100,22 +94,12 @@ class ChattingViewModel @Inject constructor(
     }
 
     private fun setupSocketListeners() {
-        sockets.onMessage("receive-message") { handleReceivedMessage(it) }
+        viewModelScope.launch {
+            handleMessageReceiveUseCase()
+        }
         sockets.onMessage("typing") { handleTypingEvent(it) }
         sockets.onMessage("message-status") { handleMessageStatusUpdate(it) }
         sockets.onMessage("messages-seen") { markMessagesAsSeen() }
-    }
-
-    private fun handleReceivedMessage(data: JSONObject) {
-        Log.d("Receive Message", data.toString())
-        addMessageToState(
-            MessageDTO(
-                content = data["msg"] as? String ?: "",
-                receiverId = data["receiverId"] as? String,
-                timestamp = (data["timestamp"] as String).substring(11, 16),
-                messageId = data["msgId"] as? String
-            )
-        )
     }
 
     private fun handleTypingEvent(data: JSONObject) {
@@ -147,15 +131,13 @@ class ChattingViewModel @Inject constructor(
     private fun getMessages(senderId: String, receiverId: String) {
         viewModelScope.launch {
             getMessagesUseCase(senderId, receiverId).collect { response ->
-                response.map { singleMessage ->
-                    if (!_messageState.value.contains(singleMessage)) {
-                        _messageState.update { it + response }
-                    }
-                }
+                _messageState.update { response }
             }
         }
         viewModelScope.launch {
-            syncRemoteServerUseCase(senderId, receiverId)
+            syncRemoteServerUseCase(senderId, receiverId).collect{
+                Log.d("Sync", "Synced messages")
+            }
         }
     }
 

@@ -5,7 +5,11 @@ import androidx.annotation.RequiresApi
 import com.example.realtimeconnect.features.chat.data.local.entity.MessageEntity
 import com.example.realtimeconnect.features.chat.data.model.DMResponseDTO
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
+import java.text.SimpleDateFormat
 import java.time.Instant
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 
 fun DMResponseDTO.toDomainList(): List<MessageDTO>? {
@@ -23,7 +27,6 @@ fun DMResponseDTO.toDomainList(): List<MessageDTO>? {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun DMResponseDTO.toEntityList(): List<MessageEntity>? {
     return this.messageData?.messages?.mapNotNull {
         MessageEntity(
@@ -50,23 +53,37 @@ fun MessageEntity.toDomainModel(): MessageDTO {
     )
 }
 
-
-@RequiresApi(Build.VERSION_CODES.O)
 fun String.toUnixTimestamp(): Long {
     return try {
-        val instant = Instant.parse(this)
-        instant.toEpochMilli()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Use Instant for API level O and above
+            val instant = Instant.parse(this)
+            instant.toEpochMilli()
+        } else {
+            // Use SimpleDateFormat for below API level O
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            sdf.parse(this)?.time ?: System.currentTimeMillis()
+        }
     } catch (e: Exception) {
         System.currentTimeMillis() // Fallback to current time if parsing fails
     }
 }
-
-@RequiresApi(Build.VERSION_CODES.O)
 fun Long.toISOString(): String {
     return try {
-        val instant = Instant.ofEpochMilli(this)
-        instant.toString() // Returns in ISO 8601 format
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Use Instant for API level O and above
+            val instant = Instant.ofEpochMilli(this)
+            instant.toString() // Returns in ISO 8601 format
+        } else {
+            // Use SimpleDateFormat for below API level O
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            sdf.format(Date(this)) // Convert Long to Date and format it
+        }
     } catch (e: Exception) {
-        Instant.now().toString() // Fallback to current time if conversion fails
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date()) // Fallback to current time if conversion fails
     }
 }
