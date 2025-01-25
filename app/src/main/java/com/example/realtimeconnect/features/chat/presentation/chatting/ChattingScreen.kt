@@ -88,17 +88,17 @@ fun ChattingScreen(
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Black),
                 title = {
-                Text(
-                    userId,
-                    style = TextStyle(
-                        fontSize = 22.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold
+                    Text(
+                        userId,
+                        style = TextStyle(
+                            fontSize = 22.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold
+                        )
                     )
-                )
-            }, modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary),
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.primary),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -177,6 +177,7 @@ fun ChattingScreen(
                         ) {
                             Column(
                                 Modifier
+                                    .animateItem()
                                     .background(bgColor, shape = cornerShape)
                                     .border(
                                         border = BorderStroke(1.dp, Color.White),

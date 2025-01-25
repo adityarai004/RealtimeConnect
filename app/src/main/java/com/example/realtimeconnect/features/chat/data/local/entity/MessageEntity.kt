@@ -1,9 +1,10 @@
 package com.example.realtimeconnect.features.chat.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "messages")
+@Entity(tableName = "messages", indices = [Index(value = ["remoteId"], unique = true)])
 data class MessageEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val senderId: String,

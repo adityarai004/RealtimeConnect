@@ -30,8 +30,12 @@ interface MessagesDao {
     suspend fun updateMessagesToReceived(senderId: String, receiverId: String)
 
     @Query("UPDATE messages SET status = \"seen\" WHERE (((senderId = :senderId AND receiverId = :receiverId) OR (senderId = :receiverId AND receiverId = :senderId)) AND status != \"seen\") ")
-    suspend fun updateMessagesToSeen(senderId: String, receiverId: String)
+    fun updateMessagesToSeen(senderId: String, receiverId: String)
 
     @Query("UPDATE messages SET remoteId= :remoteId, status= \"sent\" WHERE id = :messageId")
     fun updateMessageToSent(messageId: Long, remoteId: String)
+
+    @Query("UPDATE messages SET status= :newStatus WHERE remoteId = :remoteId")
+    fun updateMessageStatusVieRemoteId(remoteId: String, newStatus: String)
+
 }

@@ -5,6 +5,7 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
     id("com.google.devtools.ksp")
+    id("androidx.room")
     kotlin("plugin.serialization") version "2.1.0"
 
 }
@@ -12,6 +13,11 @@ plugins {
 android {
     namespace = "com.example.realtimeconnect"
     compileSdk = 35
+
+    room {
+        schemaDirectory("$projectDir/schemas")
+    }
+
 
     defaultConfig {
         applicationId = "com.example.realtimeconnect"
@@ -21,6 +27,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        kapt {
+            arguments {
+                arg("room.schemaLocation", "$projectDir/schemas")
+            }
+        }
+
+
     }
 
     buildTypes {

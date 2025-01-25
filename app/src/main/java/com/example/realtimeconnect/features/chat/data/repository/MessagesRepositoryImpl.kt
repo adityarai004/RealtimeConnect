@@ -1,8 +1,6 @@
 package com.example.realtimeconnect.features.chat.data.repository
 
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import com.example.realtimeconnect.core.Resource
 import com.example.realtimeconnect.core.di.IoDispatcher
 import com.example.realtimeconnect.features.chat.data.local.dao.MessagesDao
@@ -31,19 +29,6 @@ class MessagesRepositoryImpl @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     private val socket: SocketDataSource
 ) : MessagesRepository {
-//    override suspend fun getMessages(receiverId: String): Flow<Resource<List<MessageDTO>?>> = flow {
-//        emit(Resource.Loading)
-//        try {
-//            val response = messagesDataSource.getMessages(receiverId)
-//            if (response.success == true) {
-//                messagesDao.insertMessage(response.toEntityList() ?: emptyList())
-//            } else {
-//                emit(Resource.Error(response.message ?: "Cannot fetch messages at the moment"))
-//            }
-//        } catch (e: Exception) {
-//            emit(Resource.Error(e.message ?: "Cannot fetch messages at the moment"))
-//        }
-//    }.flowOn(ioDispatcher)
 
     override suspend fun getGroupMessages(
         page: Int,
@@ -74,51 +59,52 @@ class MessagesRepositoryImpl @Inject constructor(
         item.map { it.toDomainModel() }
     }.flowOn(ioDispatcher)
 
+    override suspend fun syncRemoteServer(senderId: String, receiverId: String): Flow<Unit> =
+        flow<Unit> {
+            try {
+                Log.d("Sync", "Starting sync operation")
 
-
-    override suspend fun syncRemoteServer(senderId: String, receiverId: String): Flow<Unit> = flow<Unit> {
-        try {
-            Log.d("Sync", "Starting sync operation")
-
-            val pendingMessages = messagesDao.getPendingStatus(senderId, receiverId).first()
-            if (pendingMessages > 0) {
-                Log.d("Sync", "Skipping sync - found $pendingMessages pending messages")
-                return@flow
-            }
-            val lastMsgTimeStamp = messagesDao.getLastMessageTimestamp(senderId, receiverId).first()
-            val response = messagesDataSource.getMessages(
-                receiverId = receiverId,
-                timestamp = lastMsgTimeStamp.toISOString()
-            )
-
-            if (response.success != true) {
-                Log.e("SyncError", "Sync failed: ${response.message}")
-                return@flow
-            }
-
-            // To update the status of messages which were already there in the local database of the sender
-            if (response.messageData?.latestStatus != null) {
-                val latestStatus = response.messageData?.latestStatus ?: ""
-                if (latestStatus == "seen") {
-                    messagesDao.updateMessagesToSeen(senderId, receiverId)
-                } else if (latestStatus == "delivered") {
-                    messagesDao.updateMessagesToReceived(senderId, receiverId)
+                val pendingMessages = messagesDao.getPendingStatus(senderId, receiverId).first()
+                if (pendingMessages > 0) {
+                    Log.d("Sync", "Skipping sync - found $pendingMessages pending messages")
+                    return@flow
                 }
-            }
+                val lastMsgTimeStamp =
+                    messagesDao.getLastMessageTimestamp(senderId, receiverId).first()
+                val response = messagesDataSource.getMessages(
+                    receiverId = receiverId,
+                    timestamp = lastMsgTimeStamp.toISOString()
+                )
 
-            // Fetching and inserting messages into database which are present on server only and not in local database
-            val messages = response.toEntityList()
-            if (!messages.isNullOrEmpty()) {
-                messagesDao.insertMessage(messages)
-                Log.d("Sync", "Successfully synced ${messages.size} messages")
-            }
-        } catch (e: Exception) {
-            Log.e("SyncError", "Sync error: ${e.message}")
-            throw e // Rethrow to handle in ViewModel if needed
-        }
-    }.flowOn(ioDispatcher)
+                if (response.success != true) {
+                    Log.e("SyncError", "Sync failed: ${response.message}")
+                    return@flow
+                }
 
-    override suspend fun sendMessage(message: String, senderId: String, receiverId: String): Flow<Unit> = flow<Unit> {
+                // To update the status of messages which were already there in the local database of the sender
+                if (response.messageData?.latestStatus != null) {
+                    val latestStatus = response.messageData?.latestStatus ?: ""
+                    if (latestStatus == "seen") {
+                        messagesDao.updateMessagesToSeen(senderId, receiverId)
+                    } else if (latestStatus == "delivered") {
+                        messagesDao.updateMessagesToReceived(senderId, receiverId)
+                    }
+                }
+
+                // Fetching and inserting messages into database which are present on server only and not in local database
+                val messages = response.toEntityList()
+                if (!messages.isNullOrEmpty()) {
+                    messagesDao.insertMessage(messages)
+                    Log.d("Sync", "Successfully synced ${messages.size} messages")
+                }
+            } catch (e: Exception) {
+                Log.e("SyncError", "Sync error: ${e.message}")
+                throw e // Rethrow to handle in ViewModel if needed
+            }
+        }.flowOn(ioDispatcher)
+
+    override suspend fun sendMessage(message: String, senderId: String, receiverId: String):
+            Flow<Unit> = flow<Unit> {
         try {
             val rowId = messagesDao.insertMessage(
                 listOf(
@@ -161,6 +147,31 @@ class MessagesRepositoryImpl @Inject constructor(
                         )
                     )
                 )
+            }
+        } catch (e: Exception) {
+            Log.e("SocketError", "Socket Error: ${e.message}")
+        }
+    }
+
+    override suspend fun messageSeen(senderId: String, receiverId: String) {
+        try {
+            Log.d("MessageSeen", "Sending message seen event")
+            socket.onMessage("messages-seen") { data ->
+                Log.d("Message Seen", data.toString())
+                messagesDao.updateMessagesToSeen(senderId, receiverId)
+            }
+        } catch (e: Exception) {
+            Log.e("SocketError", "Socket Error: ${e.message}")
+        }
+    }
+
+    override suspend fun messageStatusUpdate() {
+        try {
+            socket.onMessage("message-status") { data ->
+                Log.d("Message Status", data.toString())
+                val msgId = data["id"] as String
+                val status = data["status"] as String
+                messagesDao.updateMessageStatusVieRemoteId(msgId, status)
             }
         } catch (e: Exception) {
             Log.e("SocketError", "Socket Error: ${e.message}")

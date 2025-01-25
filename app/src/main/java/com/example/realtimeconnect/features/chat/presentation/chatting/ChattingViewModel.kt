@@ -9,6 +9,8 @@ import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import com.example.realtimeconnect.features.chat.data.source.socket.SocketDataSource
 import com.example.realtimeconnect.features.chat.domain.usecase.GetMessagesUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.HandleMessageReceiveUseCase
+import com.example.realtimeconnect.features.chat.domain.usecase.HandleMessageSeenUseCase
+import com.example.realtimeconnect.features.chat.domain.usecase.MessageStatusUpdateUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.SendMessageUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.SyncRemoteServerUseCase
 import com.example.realtimeconnect.features.chat.presentation.chatting.state.ChattingScreenEvents
@@ -29,6 +31,8 @@ class ChattingViewModel @Inject constructor(
     private val syncRemoteServerUseCase: SyncRemoteServerUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val handleMessageReceiveUseCase: HandleMessageReceiveUseCase,
+    private val messageStatusUpdateUseCase: MessageStatusUpdateUseCase,
+    private val handleMessageSeenUseCase: HandleMessageSeenUseCase,
     private val sockets: SocketDataSource
 ) : ViewModel() {
 
@@ -82,7 +86,6 @@ class ChattingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val myUserId = dataStoreHelper.getString(SharedPrefsConstants.USERID)
             _state.update { it.copy(receiverId = receiverId, senderId = myUserId) }
-
             getMessages(chattingState.value.senderId, receiverId)
             sockets.connectSocket(myUserId)
             sockets.sendEvent(
@@ -96,10 +99,10 @@ class ChattingViewModel @Inject constructor(
     private fun setupSocketListeners() {
         viewModelScope.launch {
             handleMessageReceiveUseCase()
+            handleMessageSeenUseCase(_state.value.senderId, _state.value.receiverId)
+            messageStatusUpdateUseCase()
         }
         sockets.onMessage("typing") { handleTypingEvent(it) }
-        sockets.onMessage("message-status") { handleMessageStatusUpdate(it) }
-        sockets.onMessage("messages-seen") { markMessagesAsSeen() }
     }
 
     private fun handleTypingEvent(data: JSONObject) {
@@ -108,20 +111,6 @@ class ChattingViewModel @Inject constructor(
         debounceJob = CoroutineScope(coroutineContext).launch {
             delay(2000L)
             _state.update { it.copy(otherGuyTyping = false) }
-        }
-    }
-
-    private fun handleMessageStatusUpdate(data: JSONObject) {
-        val msgId = data["id"] as String
-        val status = data["status"] as String
-        _messageState.update { list ->
-            list.map { if (it.messageId == msgId) it.copy(status = status) else it }
-        }
-    }
-
-    private fun markMessagesAsSeen() {
-        _messageState.update { list ->
-            list.map { it.copy(status = "seen") }
         }
     }
 
@@ -141,14 +130,4 @@ class ChattingViewModel @Inject constructor(
         }
     }
 
-    /**
-     * State management helpers
-     */
-    private fun addMessageToState(message: MessageDTO) {
-        _messageState.update { it + message }
-    }
-
-    private fun clearMessageInput() {
-        _state.update { it.copy(messageValue = "") }
-    }
 }
