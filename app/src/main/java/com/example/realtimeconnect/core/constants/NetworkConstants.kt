@@ -8,5 +8,6 @@ object NetworkConstants {
     const val NON_GROUP_USERS = "/users/non-group"
     const val GROUP_MESSAGES = "/chats/group-messages"
     const val DMS = "/chats/messages"
+    const val UPLOAD_IMAGES = "/chats/upload-image"
     const val JOIN_GROUP = "/group-chat/join-group"
 }

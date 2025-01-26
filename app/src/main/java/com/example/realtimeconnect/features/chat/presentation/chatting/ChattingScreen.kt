@@ -1,5 +1,12 @@
 package com.example.realtimeconnect.features.chat.presentation.chatting
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -23,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,11 +48,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airbnb.lottie.compose.LottieAnimation
@@ -68,6 +79,21 @@ fun ChattingScreen(
     val messageList = chattingViewModel.messageState.collectAsStateWithLifecycle().value
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val pickMediaContract = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { mediaUri ->
+        if(mediaUri?.path.isNullOrEmpty()){
+            return@rememberLauncherForActivityResult
+        }
+
+        Log.d("ChattingScreen", "Media Uri: ${mediaUri?.path}")
+        chattingViewModel.handleEvents(ChattingScreenEvents.OnSendMedia(mediaUri!!))
+    }
+    val context = LocalContext.current
+    val requestPermissionContract =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if(isGranted){
+                pickMediaContract.launch(PickVisualMediaRequest())
+            }
+        }
     LaunchedEffect(messageList.size, key2 = chattingState.value.otherGuyTyping) {
         if (chattingState.value.otherGuyTyping) {
             coroutineScope.launch {
@@ -126,11 +152,42 @@ fun ChattingScreen(
                     focusedPlaceholderColor = Color.White.copy(alpha = 0.5f),
                 ),
                 trailingIcon = {
-                    IconButton(onClick = {
-                        chattingViewModel.handleEvents(ChattingScreenEvents.OnSend)
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    Row {
+                        IconButton(onClick = {
+
+                            val isTiramisu = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                            val hasMediaPermission: Boolean =
+                                if (isTiramisu) (ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.READ_MEDIA_IMAGES
+                                ) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.READ_MEDIA_VIDEO
+                                ) == PackageManager.PERMISSION_GRANTED) else ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.READ_EXTERNAL_STORAGE
+                                ) == PackageManager.PERMISSION_GRANTED
+
+                            if(hasMediaPermission){
+                                pickMediaContract.launch(PickVisualMediaRequest())
+                            } else {
+                                if(!isTiramisu){
+                                    requestPermissionContract.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                                } else {
+                                    requestPermissionContract.launch(Manifest.permission.READ_MEDIA_IMAGES)
+                                    requestPermissionContract.launch(Manifest.permission.READ_MEDIA_VIDEO)
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Outlined.Add, contentDescription = null)
+                        }
+                        IconButton(onClick = {
+                            chattingViewModel.handleEvents(ChattingScreenEvents.OnSend)
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                        }
                     }
+
                 },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,

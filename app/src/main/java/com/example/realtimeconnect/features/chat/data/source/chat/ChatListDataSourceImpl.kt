@@ -1,14 +1,24 @@
 package com.example.realtimeconnect.features.chat.data.source.chat
 
+import android.net.Uri
 import com.example.realtimeconnect.core.constants.NetworkConstants
 import com.example.realtimeconnect.features.chat.data.model.ChatListResponseDTO
 import com.example.realtimeconnect.features.chat.data.model.JoinGroupResponseDTO
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.onUpload
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.append
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import okio.Path
+import java.io.File
+import java.net.URI
 import javax.inject.Inject
 
 class ChatListDataSourceImpl @Inject constructor(private val httpClient: HttpClient) :
@@ -42,4 +52,5 @@ class ChatListDataSourceImpl @Inject constructor(private val httpClient: HttpCli
         }.body<JoinGroupResponseDTO>()
         return response
     }
+
 }

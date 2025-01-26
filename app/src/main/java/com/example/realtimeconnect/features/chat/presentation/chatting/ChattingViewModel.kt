@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.realtimeconnect.core.constants.SharedPrefsConstants
 import com.example.realtimeconnect.core.datastore.DataStoreHelper
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
+import com.example.realtimeconnect.features.chat.data.source.messages.MessagesDataSource
 import com.example.realtimeconnect.features.chat.data.source.socket.SocketDataSource
 import com.example.realtimeconnect.features.chat.domain.usecase.GetMessagesUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.HandleMessageReceiveUseCase
@@ -33,7 +34,8 @@ class ChattingViewModel @Inject constructor(
     private val handleMessageReceiveUseCase: HandleMessageReceiveUseCase,
     private val messageStatusUpdateUseCase: MessageStatusUpdateUseCase,
     private val handleMessageSeenUseCase: HandleMessageSeenUseCase,
-    private val sockets: SocketDataSource
+    private val sockets: SocketDataSource,
+    private val messageDataSource: MessagesDataSource
 ) : ViewModel() {
 
     // State management
@@ -56,6 +58,11 @@ class ChattingViewModel @Inject constructor(
         when (event) {
             is ChattingScreenEvents.OnSend -> handleSendMessage()
             is ChattingScreenEvents.OnTextChange -> handleTextChange(event.newValue)
+            is ChattingScreenEvents.OnSendMedia -> {
+                viewModelScope.launch {
+                    messageDataSource.uploadMedia(_state.value.receiverId, event.uri)
+                }
+            }
         }
     }
 
@@ -129,5 +136,4 @@ class ChattingViewModel @Inject constructor(
             }
         }
     }
-
 }

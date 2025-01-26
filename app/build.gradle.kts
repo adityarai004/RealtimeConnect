@@ -102,7 +102,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    annotationProcessor("android.arch.persistence.room:compiler:1.1.1")
+    annotationProcessor(libs.compiler)
+    implementation (libs.androidx.work.runtime.ktx)
+
 
 }
 

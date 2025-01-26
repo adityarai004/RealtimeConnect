@@ -1,19 +1,38 @@
 package com.example.realtimeconnect.features.chat.data.source.messages
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
 import com.example.realtimeconnect.core.constants.NetworkConstants
 import com.example.realtimeconnect.core.constants.NetworkConstants.DMS
+import com.example.realtimeconnect.core.datastore.DataStoreHelper
 import com.example.realtimeconnect.features.chat.data.model.DMResponseDTO
 import com.example.realtimeconnect.features.chat.data.model.GroupChatListResponseDTO
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.onUpload
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import io.ktor.http.cio.Response
+import java.io.File
 import javax.inject.Inject
 
-class MessagesDataSourceImpl @Inject constructor(private val httpClient: HttpClient) :
+class MessagesDataSourceImpl @Inject constructor(
+    private val httpClient: HttpClient,
+    @ApplicationContext private val context: Context,
+    private val dataStoreHelper: DataStoreHelper
+) :
     MessagesDataSource {
     override suspend fun getMessages(receiverId: String, timestamp: String): DMResponseDTO {
-        val response = httpClient.get(DMS){
+        val response = httpClient.get(DMS) {
             parameter("receiverId", receiverId)
             parameter("timestamp", timestamp)
         }.body<DMResponseDTO>()
@@ -21,9 +40,13 @@ class MessagesDataSourceImpl @Inject constructor(private val httpClient: HttpCli
         return response
     }
 
-    override suspend fun getGroupMessages(page: Int, perPage: Int, groupId: String): GroupChatListResponseDTO {
-        val response = httpClient.get(NetworkConstants.GROUP_MESSAGES){
-            url{
+    override suspend fun getGroupMessages(
+        page: Int,
+        perPage: Int,
+        groupId: String
+    ): GroupChatListResponseDTO {
+        val response = httpClient.get(NetworkConstants.GROUP_MESSAGES) {
+            url {
                 parameter(key = "page", value = page)
                 parameter(key = "perPage", value = perPage)
                 parameter(key = "groupId", value = groupId)
@@ -31,4 +54,49 @@ class MessagesDataSourceImpl @Inject constructor(private val httpClient: HttpCli
         }.body<GroupChatListResponseDTO>()
         return response
     }
+
+    override suspend fun uploadMedia(receiverId: String, uri: Uri) {
+        val file = createTempFileFromUri(uri)
+        val response = httpClient.post(NetworkConstants.UPLOAD_IMAGES) {
+            header(HttpHeaders.Authorization, "Bearer ${dataStoreHelper.getUserAuthKey()}")
+
+            setBody(
+                MultiPartFormDataContent(
+                    formData {
+                        append(
+                            "image",
+                            File(file.path ?: "").readBytes(),
+                            Headers.build {
+                                append(
+                                    HttpHeaders.ContentDisposition,
+                                    "name=\"image\"; filename=${file.name}"
+                                )
+                                append(HttpHeaders.ContentType, "image/jpg")
+                            }
+                        )
+                        append("receiverId", receiverId)
+                    },
+                    boundary = "WebAppBoundary"
+                )
+            )
+            onUpload { bytesSent, contentLength ->
+                println("Upload progress: $bytesSent bytes sent out of $contentLength")
+            }
+        }
+    }
+    private fun createTempFileFromUri(uri: Uri): File {
+        val inputStream = context.contentResolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("Cannot open URI")
+
+        val fileExtension = context.contentResolver.getType(uri)
+            ?.substringAfter("/")
+            ?: "jpg" // Default to jpg if can't determine
+
+        val tempFile = File(context.cacheDir, "tempFile1.${fileExtension}")
+        tempFile.outputStream().use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+        return tempFile
+    }
+
 }
