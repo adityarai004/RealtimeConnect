@@ -7,5 +7,8 @@ data class MessageDTO(
     val timestamp: String? = null,
     var status: String? = null,
     val messageId: String? = null,
-    val contentType: String = "text"
+    val contentType: String = "text",
+    val fileUri: String? = null,
+    val remoteUrl: String? = null,
+    val mediaType: String = "image"
 )

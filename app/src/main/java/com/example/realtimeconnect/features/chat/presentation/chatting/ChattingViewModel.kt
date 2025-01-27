@@ -1,6 +1,7 @@
 package com.example.realtimeconnect.features.chat.presentation.chatting
 
 import android.util.Log
+import androidx.core.net.toFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.realtimeconnect.core.constants.SharedPrefsConstants
@@ -8,12 +9,14 @@ import com.example.realtimeconnect.core.datastore.DataStoreHelper
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import com.example.realtimeconnect.features.chat.data.source.messages.MessagesDataSource
 import com.example.realtimeconnect.features.chat.data.source.socket.SocketDataSource
+import com.example.realtimeconnect.features.chat.domain.repository.MessagesRepository
 import com.example.realtimeconnect.features.chat.domain.usecase.GetMessagesUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.HandleMessageReceiveUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.HandleMessageSeenUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.MessageStatusUpdateUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.SendMessageUseCase
 import com.example.realtimeconnect.features.chat.domain.usecase.SyncRemoteServerUseCase
+import com.example.realtimeconnect.features.chat.domain.usecase.UploadMediaUseCase
 import com.example.realtimeconnect.features.chat.presentation.chatting.state.ChattingScreenEvents
 import com.example.realtimeconnect.features.chat.presentation.chatting.state.ChattingState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,7 +38,7 @@ class ChattingViewModel @Inject constructor(
     private val messageStatusUpdateUseCase: MessageStatusUpdateUseCase,
     private val handleMessageSeenUseCase: HandleMessageSeenUseCase,
     private val sockets: SocketDataSource,
-    private val messageDataSource: MessagesDataSource
+    private val uploadMediaUseCase: UploadMediaUseCase
 ) : ViewModel() {
 
     // State management
@@ -60,7 +63,12 @@ class ChattingViewModel @Inject constructor(
             is ChattingScreenEvents.OnTextChange -> handleTextChange(event.newValue)
             is ChattingScreenEvents.OnSendMedia -> {
                 viewModelScope.launch {
-                    messageDataSource.uploadMedia(_state.value.receiverId, event.uri)
+                    uploadMediaUseCase(
+                        _state.value.senderId,
+                        _state.value.receiverId,
+                        _state.value.messageValue,
+                        event.uri
+                    ).collect {}
                 }
             }
         }
@@ -73,7 +81,7 @@ class ChattingViewModel @Inject constructor(
                     message = chattingState.value.messageValue,
                     senderId = chattingState.value.senderId,
                     receiverId = chattingState.value.receiverId
-                ).collect{
+                ).collect {
                     Log.d("Message", "Message sent ${chattingState.value.messageValue}")
                 }
             }
@@ -131,7 +139,7 @@ class ChattingViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            syncRemoteServerUseCase(senderId, receiverId).collect{
+            syncRemoteServerUseCase(senderId, receiverId).collect {
                 Log.d("Sync", "Synced messages")
             }
         }

@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.realtimeconnect.core.Resource
 import com.example.realtimeconnect.core.di.IoDispatcher
 import com.example.realtimeconnect.features.chat.data.local.dao.MessagesDao
+import com.example.realtimeconnect.features.chat.data.local.entity.MediaEntity
 import com.example.realtimeconnect.features.chat.data.local.entity.MessageEntity
 import com.example.realtimeconnect.features.chat.data.model.GroupMessageDTO
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import java.io.File
 import javax.inject.Inject
 
 class MessagesRepositoryImpl @Inject constructor(
@@ -30,6 +32,9 @@ class MessagesRepositoryImpl @Inject constructor(
     private val socket: SocketDataSource
 ) : MessagesRepository {
 
+    companion object{
+        private const val TAG = "MessagesRepositoryImpl"
+    }
     override suspend fun getGroupMessages(
         page: Int,
         perPage: Int,
@@ -177,4 +182,43 @@ class MessagesRepositoryImpl @Inject constructor(
             Log.e("SocketError", "Socket Error: ${e.message}")
         }
     }
+
+    override suspend fun sendFile(
+        senderId: String,
+        receiverId: String,
+        content: String,
+        file: File
+    ): Flow<Unit> = flow<Unit> {
+        try{
+            val rowId = messagesDao.insertMessage(
+                listOf(
+                    MessageEntity(
+                        senderId = senderId,
+                        receiverId = receiverId,
+                        content = content,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            )
+
+            Log.d(TAG, "sendFile: ${rowId.firstOrNull()}")
+
+            val mediaRowId = messagesDao.insertMedia(
+                listOf(
+                    MediaEntity(
+                        messageId = rowId.firstOrNull() ?: 0,
+                        mediaType = "image",
+                        fileUri = file.path,
+                    )
+                )
+            )
+
+            Log.d(TAG, "sendFile: ${mediaRowId.firstOrNull()}")
+
+            Log.d("SendMessage", "Message inserted with rowId: ${rowId.firstOrNull()}")
+
+        }catch (e: Exception){
+            Log.e("SendFileError", "Error sending file: ${e.message}")
+        }
+    }.flowOn(ioDispatcher)
 }

@@ -4,6 +4,7 @@ import com.example.realtimeconnect.core.Resource
 import com.example.realtimeconnect.features.chat.data.model.GroupMessageDTO
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 
 interface MessagesRepository {
     suspend fun getGroupMessages(page: Int,perPage: Int, groupId: String): Flow<Resource<List<GroupMessageDTO?>?>>
@@ -13,4 +14,5 @@ interface MessagesRepository {
     suspend fun receiveMessage()
     suspend fun messageSeen(senderId: String, receiverId: String)
     suspend fun messageStatusUpdate()
+    suspend fun sendFile(senderId: String, receiverId: String, content: String, file: File): Flow<Unit>
 }

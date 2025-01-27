@@ -5,14 +5,19 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
+import com.example.realtimeconnect.features.chat.data.local.entity.MediaEntity
 import com.example.realtimeconnect.features.chat.data.local.entity.MessageEntity
+import com.example.realtimeconnect.features.chat.data.local.entity.MessageWithMedia
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MessagesDao {
+
+    @Transaction
     @Query("SELECT * FROM messages WHERE (senderId = :senderId AND receiverId = :receiverId) OR (senderId = :receiverId AND receiverId = :senderId) ORDER BY timestamp ASC")
-    fun getMessages(senderId: String, receiverId: String): Flow<List<MessageEntity>>
+    fun getMessages(senderId: String, receiverId: String): Flow<List<MessageWithMedia>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertMessage(messages: List<MessageEntity>): List<Long>
@@ -38,4 +43,6 @@ interface MessagesDao {
     @Query("UPDATE messages SET status= :newStatus WHERE remoteId = :remoteId")
     fun updateMessageStatusVieRemoteId(remoteId: String, newStatus: String)
 
+    @Insert
+    fun insertMedia(media: List<MediaEntity>): List<Long>
 }

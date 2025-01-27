@@ -27,7 +27,6 @@ import javax.inject.Inject
 
 class MessagesDataSourceImpl @Inject constructor(
     private val httpClient: HttpClient,
-    @ApplicationContext private val context: Context,
     private val dataStoreHelper: DataStoreHelper
 ) :
     MessagesDataSource {
@@ -55,8 +54,7 @@ class MessagesDataSourceImpl @Inject constructor(
         return response
     }
 
-    override suspend fun uploadMedia(receiverId: String, uri: Uri) {
-        val file = createTempFileFromUri(uri)
+    override suspend fun uploadMedia(receiverId: String, file: File) {
         val response = httpClient.post(NetworkConstants.UPLOAD_IMAGES) {
             header(HttpHeaders.Authorization, "Bearer ${dataStoreHelper.getUserAuthKey()}")
 
@@ -84,19 +82,4 @@ class MessagesDataSourceImpl @Inject constructor(
             }
         }
     }
-    private fun createTempFileFromUri(uri: Uri): File {
-        val inputStream = context.contentResolver.openInputStream(uri)
-            ?: throw IllegalArgumentException("Cannot open URI")
-
-        val fileExtension = context.contentResolver.getType(uri)
-            ?.substringAfter("/")
-            ?: "jpg" // Default to jpg if can't determine
-
-        val tempFile = File(context.cacheDir, "tempFile1.${fileExtension}")
-        tempFile.outputStream().use { outputStream ->
-            inputStream.copyTo(outputStream)
-        }
-        return tempFile
-    }
-
 }

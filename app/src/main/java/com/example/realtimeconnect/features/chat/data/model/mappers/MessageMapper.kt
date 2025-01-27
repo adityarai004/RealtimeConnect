@@ -3,6 +3,7 @@ package com.example.realtimeconnect.features.chat.data.model.mappers
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.example.realtimeconnect.features.chat.data.local.entity.MessageEntity
+import com.example.realtimeconnect.features.chat.data.local.entity.MessageWithMedia
 import com.example.realtimeconnect.features.chat.data.model.DMResponseDTO
 import com.example.realtimeconnect.features.chat.data.model.MessageDTO
 import java.text.SimpleDateFormat
@@ -36,20 +37,22 @@ fun DMResponseDTO.toEntityList(): List<MessageEntity>? {
             content = it?.messageContent ?: "",
             status = it?.status ?: "",
             remoteId = it?.id,
-            recipientStatus = it?.status ?: "sent",
             contentType = it?.contentType ?: ""
         )
     }
 }
 
-fun MessageEntity.toDomainModel(): MessageDTO {
+fun MessageWithMedia.toDomainModel(): MessageDTO {
     return MessageDTO(
-        content = this.content,
-        senderId = this.senderId,
-        receiverId = this.receiverId,
-        timestamp = this.timestamp.toISOString(),
-        status = this.status,
-        contentType = this.contentType,
+        content = this.message.content,
+        senderId = this.message.senderId,
+        receiverId = this.message.receiverId,
+        timestamp = this.message.timestamp.toISOString(),
+        status = this.message.status,
+        contentType = this.message.contentType,
+        fileUri = this.mediaEntity?.fileUri,
+        remoteUrl = this.mediaEntity?.remoteUrl,
+        mediaType = this.mediaEntity?.mediaType ?: "image"
     )
 }
 
