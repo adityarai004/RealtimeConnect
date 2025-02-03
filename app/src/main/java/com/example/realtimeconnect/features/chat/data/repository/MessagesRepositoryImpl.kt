@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -32,9 +33,10 @@ class MessagesRepositoryImpl @Inject constructor(
     private val socket: SocketDataSource
 ) : MessagesRepository {
 
-    companion object{
+    companion object {
         private const val TAG = "MessagesRepositoryImpl"
     }
+
     override suspend fun getGroupMessages(
         page: Int,
         perPage: Int,
@@ -183,42 +185,77 @@ class MessagesRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun sendFile(
+    override suspend fun insertMediaMessageToLocal(
         senderId: String,
         receiverId: String,
         content: String,
         file: File
-    ): Flow<Unit> = flow<Unit> {
-        try{
-            val rowId = messagesDao.insertMessage(
-                listOf(
-                    MessageEntity(
-                        senderId = senderId,
-                        receiverId = receiverId,
-                        content = content,
-                        timestamp = System.currentTimeMillis()
+    ): Pair<Long?, Long?> {
+        return try {
+            withContext(ioDispatcher) {
+                val rowId = messagesDao.insertMessage(
+                    listOf(
+                        MessageEntity(
+                            senderId = senderId,
+                            receiverId = receiverId,
+                            content = content,
+                            timestamp = System.currentTimeMillis()
+                        )
                     )
                 )
-            )
 
-            Log.d(TAG, "sendFile: ${rowId.firstOrNull()}")
+                Log.d(TAG, "sendFile: ${rowId.firstOrNull()}")
 
-            val mediaRowId = messagesDao.insertMedia(
-                listOf(
-                    MediaEntity(
-                        messageId = rowId.firstOrNull() ?: 0,
-                        mediaType = "image",
-                        fileUri = file.path,
+                val mediaRowId = messagesDao.insertMedia(
+                    listOf(
+                        MediaEntity(
+                            messageId = rowId.firstOrNull() ?: 0,
+                            mediaType = "image",
+                            fileUri = file.path,
+                        )
                     )
                 )
-            )
 
-            Log.d(TAG, "sendFile: ${mediaRowId.firstOrNull()}")
-
-            Log.d("SendMessage", "Message inserted with rowId: ${rowId.firstOrNull()}")
-
-        }catch (e: Exception){
+                Log.d(TAG, "sendFile: ${mediaRowId.firstOrNull()}")
+                Pair(rowId.firstOrNull(), mediaRowId.firstOrNull())
+            }
+        } catch (e: Exception) {
             Log.e("SendFileError", "Error sending file: ${e.message}")
+            Pair(null, null)
         }
-    }.flowOn(ioDispatcher)
+    }
+
+    override suspend fun sendMediaMessageAndUpdateLocal(
+        receiverId: String,
+        content: String,
+        filePath: String,
+        fileName: String,
+        mimeType: String,
+        messageRowId: Long,
+        mediaRowId: Long
+    ): Boolean {
+        return try {
+            withContext(ioDispatcher) {
+                val response = messagesDataSource.uploadMedia(receiverId, content, filePath, fileName, mimeType)
+                if (response.status == true) {
+                    messagesDao.updateMessageToSent(
+                        messageRowId,
+                        response.uploadMediaData?.message?.id ?: ""
+                    )
+                    messagesDao.updateMediaRemoteUrl(
+                        mediaRowId,
+                        response.uploadMediaData?.media?.url ?: ""
+                    )
+                    true
+                } else {
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SendFileError", "Error sending file: ${e.message}")
+            false
+        }
+    }
+
+
 }

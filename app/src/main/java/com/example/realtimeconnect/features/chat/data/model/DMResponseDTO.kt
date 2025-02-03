@@ -24,23 +24,3 @@ data class MessageData(
     @SerialName("latestStatus")
     val latestStatus: String?
 )
-
-
-
-@Serializable
-data class Message(
-    @SerialName("createdAt")
-    var createdAt: String,
-    @SerialName("id")
-    var id: String,
-    @SerialName("messageContent")
-    var messageContent: String,
-    @SerialName("receiverId")
-    var receiverId: String,
-    @SerialName("senderId")
-    var senderId: String,
-    @SerialName("status")
-    var status: String?,
-    @SerialName("contentType")
-    val contentType: String = "text"
-)

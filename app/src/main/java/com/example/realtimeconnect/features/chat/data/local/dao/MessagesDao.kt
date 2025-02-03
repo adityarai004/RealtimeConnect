@@ -45,4 +45,7 @@ interface MessagesDao {
 
     @Insert
     fun insertMedia(media: List<MediaEntity>): List<Long>
+
+    @Query("UPDATE media SET remoteUrl = :remoteUrl WHERE rowId = :mediaID")
+    fun updateMediaRemoteUrl(mediaID: Long, remoteUrl: String)
 }

@@ -3,11 +3,13 @@ package com.example.realtimeconnect.features.chat.data.source.messages
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import com.example.realtimeconnect.core.constants.NetworkConstants
 import com.example.realtimeconnect.core.constants.NetworkConstants.DMS
 import com.example.realtimeconnect.core.datastore.DataStoreHelper
 import com.example.realtimeconnect.features.chat.data.model.DMResponseDTO
 import com.example.realtimeconnect.features.chat.data.model.GroupChatListResponseDTO
+import com.example.realtimeconnect.features.chat.data.model.UploadMediaResponseDTO
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -28,8 +30,7 @@ import javax.inject.Inject
 class MessagesDataSourceImpl @Inject constructor(
     private val httpClient: HttpClient,
     private val dataStoreHelper: DataStoreHelper
-) :
-    MessagesDataSource {
+) : MessagesDataSource {
     override suspend fun getMessages(receiverId: String, timestamp: String): DMResponseDTO {
         val response = httpClient.get(DMS) {
             parameter("receiverId", receiverId)
@@ -54,7 +55,13 @@ class MessagesDataSourceImpl @Inject constructor(
         return response
     }
 
-    override suspend fun uploadMedia(receiverId: String, file: File) {
+    override suspend fun uploadMedia(
+        receiverId: String,
+        content: String,
+        filePath: String,
+        fileName: String,
+        mimeType: String
+    ): UploadMediaResponseDTO {
         val response = httpClient.post(NetworkConstants.UPLOAD_IMAGES) {
             header(HttpHeaders.Authorization, "Bearer ${dataStoreHelper.getUserAuthKey()}")
 
@@ -63,16 +70,17 @@ class MessagesDataSourceImpl @Inject constructor(
                     formData {
                         append(
                             "image",
-                            File(file.path ?: "").readBytes(),
+                            File(filePath).readBytes(),
                             Headers.build {
                                 append(
                                     HttpHeaders.ContentDisposition,
-                                    "name=\"image\"; filename=${file.name}"
+                                    "name=\"image\"; filename=${fileName}"
                                 )
-                                append(HttpHeaders.ContentType, "image/jpg")
+                                append(HttpHeaders.ContentType, mimeType)
                             }
                         )
                         append("receiverId", receiverId)
+                        append("content", content)
                     },
                     boundary = "WebAppBoundary"
                 )
@@ -80,6 +88,8 @@ class MessagesDataSourceImpl @Inject constructor(
             onUpload { bytesSent, contentLength ->
                 println("Upload progress: $bytesSent bytes sent out of $contentLength")
             }
-        }
+        }.body<UploadMediaResponseDTO>()
+
+        return response
     }
 }

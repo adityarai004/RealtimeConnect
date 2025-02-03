@@ -78,6 +78,7 @@ dependencies {
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)
+    kapt(libs.androidx.hilt.compiler)
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.serialization)
     implementation(libs.ktor.client.logging)
@@ -103,8 +104,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     annotationProcessor(libs.compiler)
+    implementation(libs.androidx.work.runtime)
     implementation (libs.androidx.work.runtime.ktx)
-
+    implementation(libs.androidx.hilt.work)
 
 }
 

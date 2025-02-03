@@ -41,6 +41,9 @@ class ChattingViewModel @Inject constructor(
     private val uploadMediaUseCase: UploadMediaUseCase
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "ChattingViewModel"
+    }
     // State management
     private val _state = MutableStateFlow(ChattingState())
     val chattingState = _state.asStateFlow()
@@ -68,7 +71,7 @@ class ChattingViewModel @Inject constructor(
                         _state.value.receiverId,
                         _state.value.messageValue,
                         event.uri
-                    ).collect {}
+                    )
                 }
             }
         }
